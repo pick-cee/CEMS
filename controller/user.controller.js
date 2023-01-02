@@ -1,11 +1,14 @@
 const User = require("../models/user.model")
 const loginToken = require("../models/loginToken")
+const Company = require('../models/company.model')
 const { passwordCompare, passwwordHash } = require("../helpers/bcrypt")
+const {cloudinaryUpload} = require("../helpers/cloudinary")
 const { sendMail } = require("../helpers/mailer")
 const {randomNumber} = require("../helpers/randomNumGenerator")
 const fs = require("fs")
 const path = require("path")
 const handleBars = require("handlebars")
+const employeeModel = require("../models/employee.model")
 
 const register = async(request, response) => {
     try{
@@ -102,7 +105,7 @@ const requestLoginToken = async(request, response) => {
         const {businessEmail} = request.body
         const isExists = await User.findOne({businessEmail})
         if(!isExists){
-            return response.status(400).json({ message: "Email not recognized"})
+            return response.status(400).json({ message: "Email not recognized" })
         }
         const random = await randomNumber()
         const filePath = path.join(__dirname, "../request.html")
@@ -127,7 +130,115 @@ const requestLoginToken = async(request, response) => {
     }
 }
 
+const companyDetails = async (request, response) => {
+    try{
+        const {companyName, role, numOfEmployees, businessIndustry} = request.body
+        if(!companyName && !role && !numOfEmployees && !businessIndustry) {
+            return response.status(400).json({ message: "Please fill all fields!"})
+        }
+        const company = new Company({
+            companyName: companyName,
+            role: role,
+            numOfEmployees: numOfEmployees,
+            businessIndustry: businessIndustry
+        })
+        await company.save()
+        return response.status(201).json({message: "Details recorded successfully!"})
+    }
+    catch(err){
+        return response.status(500).json({message: err.message || "Some error occured, try again later"})
+    }
+}
+
+const addEmployeee = async(request, response) => {
+    try {
+        const { firstname, lastname, email, department} = request.body
+        if(!firstname && !lastname && !email){
+            return response.status(400).json({message: "Please fill all required fields"})
+        }
+        const employee = new employeeModel({
+            firstname: firstname,
+            lastname: lastname,
+            email: email,
+            department: department
+        })
+        await employee.save()
+        const url = `http:localhost:5000/employee/loginEmp`
+        const filePath = path.join(__dirname, "../empReg.html")
+        const source = fs.readFileSync(filePath, "utf-8").toString()
+        const template = handleBars.compile(source)
+        const replacements = {
+            firstname: firstname,
+            link: url
+        }
+        const htmlToSend = template(replacements)
+    
+        await sendMail(email, "Employee Login", htmlToSend)
+        return response.status(201).json({message: "New employee record added succesfully!"})
+    }
+    catch(err){
+        return new response.status(500).json({message: err.message || "Some error occured, try again later"})
+    }
+}
+
+const updateEmployee = async (request, response) => {
+    try {
+        const userId = request.query.userId
+        const isExist = await employeeModel.findById({_id: userId})
+        if(!isExist){
+            return response.status(400).json({message: "Employee does not exists"})
+        }
+        const updateUser = await employeeModel.findByIdAndUpdate(userId, {$set: request.body}, {new: true})
+        return response.status(200).json({message: "Employee recorded successfully", updateUser})
+    }
+    catch(err){
+        return response.status(500).json({message: err.message || "Some error occured, try again later"})
+    }
+}
+
+const deleteEmployee = async (request, response) => {
+    try {
+        const userId = request.query.userId
+        const isExist = await employeeModel.findById({_id: userId})
+        if(!isExist){
+            return response.status(400).json({message: "Employee does not exists"})
+        }
+        await employeeModel.findByIdAndDelete(userId)
+        return response.status(200).json({message: "Employee deleted successfully"})
+    }
+    catch(err){
+        return response.status(500).json({message: err.message || "Some error occured, try again later"})
+    }
+}
+
+const getAllEmployee = async (request, response) => {
+    try {
+        const employee = await employeeModel.find()
+        return response.status(200).json({
+            message: "Employee record fetched successfully", Employee: employee
+        })
+    }
+    catch(err){
+        return response.status(500).json({message: err.message || "Some error occured, try again later"})
+    }
+}
+
+const getEmployeeBySearch = async (request, response) => {
+    try {
+        const search = request.query.search
+        const emp = await employeeModel.find({firstname: {$regex: search, $options: 'i'}}).limit(10)
+        if(!emp){
+            return response.status(400).json({message: "Record not found"})
+        }
+        return response.status(200).json({message: "Records found", Employee: emp})
+    }
+    catch(err){
+        return response.status(500).json({message: err.message || "Some error occured, try again later"})
+    }
+}
+
 module.exports = {
     register, loginWithVerificationCode,
-    verifyLoginToken,requestLoginToken
+    verifyLoginToken,requestLoginToken,companyDetails, addEmployeee,
+    updateEmployee, deleteEmployee, getAllEmployee, getEmployeeBySearch
 }

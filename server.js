@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const userRoutes = require('./routes/user')
+const employeeRoutes = require('./routes/employee')
 mongoose.set('strictQuery', true)
 require("dotenv").config();
 
@@ -32,6 +33,7 @@ app.get("/", (request, response) => {
 });
 
 app.use("/user", userRoutes)
+app.use('/employee', employeeRoutes)
 
 app.listen(port, () => {
     console.log(`Server running on port: ${port}`);
