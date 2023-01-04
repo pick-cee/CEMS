@@ -5,6 +5,7 @@ const fs = require("fs")
 const path = require("path")
 const handleBars = require("handlebars")
 const { sendMail } = require("../helpers/mailer")
+const taskModel = require("../models/task.model")
 
 const loginEmp = async(request, response) => {
     try{
@@ -93,4 +94,19 @@ const resendLoginToken = async(request, response) => {
     }
 }
 
-module.exports = { loginEmp, verifyLoginToken, resendLoginToken}
+const markTaskAsCompleted = async(request, response) => {
+    try{
+        const empId = request.query.empId
+        const emp = await taskModel.findOneAndUpdate({empId: empId}, {status: 'complete'}, {$set: true})
+        await emp.save()
+        return response.status(200).json({message: "Task updated successfully"})
+    }
+    catch(err){
+        return response.status(500).json({message: err.message || 'Some error occured, try again later'})
+    }
+}
+
+module.exports = { 
+    loginEmp, verifyLoginToken, resendLoginToken,
+    markTaskAsCompleted,
+}

@@ -18,6 +18,14 @@ const employeeSchema = new mongoose.Schema({
     },
     lastLogin: {
         type: Date,
+    },
+    comapnyId: {
+        type: mongoose.Types.ObjectId,
+        required: true
+    },
+    userId: {
+        type: mongoose.Types.ObjectId,
+        required: true
     }
 }, {timestamps: true})
 

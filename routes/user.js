@@ -2,7 +2,8 @@ const router = require("express").Router()
 const {register, loginWithVerificationCode, 
     verifyLoginToken, requestLoginToken, companyDetails, 
     addEmployeee, updateEmployee, deleteEmployee, getAllEmployee, 
-    getEmployeeBySearch} = require("../controller/user.controller")
+    getEmployeeBySearch,
+    assignTasksToEmployee} = require("../controller/user.controller")
 
 router.post('/register', register)
 router.post('/login', loginWithVerificationCode)
@@ -14,5 +15,6 @@ router.put('/updateEmployee', updateEmployee)
 router.delete('/deleteEmployee', deleteEmployee)
 router.get('/getAllEmployee', getAllEmployee)
 router.get('/getEmpBySearch', getEmployeeBySearch)
+router.post('/assignTaskToEmployee', assignTasksToEmployee)
 
 module.exports = router

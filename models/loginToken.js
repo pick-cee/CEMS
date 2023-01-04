@@ -11,7 +11,7 @@ const loginToken = new mongoose.Schema({
     },
     expiresIn: {
         type: Date,
-        default: new Date().getTime() + 600000,
+        default: new Date().getTime() + 1200000,
     }
 }, {timestamps: true})
 

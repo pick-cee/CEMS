@@ -1,6 +1,7 @@
 const User = require("../models/user.model")
 const loginToken = require("../models/loginToken")
 const Company = require('../models/company.model')
+const Task = require('../models/task.model')
 const { passwordCompare, passwwordHash } = require("../helpers/bcrypt")
 const {cloudinaryUpload} = require("../helpers/cloudinary")
 const { sendMail } = require("../helpers/mailer")
@@ -132,11 +133,17 @@ const requestLoginToken = async(request, response) => {
 
 const companyDetails = async (request, response) => {
     try{
+        const userId = request.query.userId
+        const isExist = await User.findOne({userId})
+        if(!isExist){
+            return response.status(400).json({message: "Please sign up"})
+        }
         const {companyName, role, numOfEmployees, businessIndustry} = request.body
         if(!companyName && !role && !numOfEmployees && !businessIndustry) {
             return response.status(400).json({ message: "Please fill all fields!"})
         }
         const company = new Company({
+            userId: userId,
             companyName: companyName,
             role: role,
             numOfEmployees: numOfEmployees,
@@ -152,15 +159,23 @@ const companyDetails = async (request, response) => {
 
 const addEmployeee = async(request, response) => {
     try {
+        const userId = request.query.userId
+        const adminCompany = await Company.findOne({userId})
         const { firstname, lastname, email, department} = request.body
         if(!firstname && !lastname && !email){
             return response.status(400).json({message: "Please fill all required fields"})
+        }
+        const empExist = await employeeModel.findOne({email})
+        if(empExist){
+            return response.status(400).json({message: "Employee record already exists"})
         }
         const employee = new employeeModel({
             firstname: firstname,
             lastname: lastname,
             email: email,
-            department: department
+            department: department,
+            comapnyId: adminCompany._id,
+            userId: adminCompany.userId
         })
         await employee.save()
         const url = `http:localhost:5000/employee/loginEmp`
@@ -184,7 +199,11 @@ const addEmployeee = async(request, response) => {
 const updateEmployee = async (request, response) => {
     try {
         const userId = request.query.userId
+        const adminId = request.query.adminId
         const isExist = await employeeModel.findById({_id: userId})
+        if(adminId != isExist.userId){
+            return response.status(400).json({message: "You cannot update the record of an employee you did not create"})
+        }
         if(!isExist){
             return response.status(400).json({message: "Employee does not exists"})
         }
@@ -199,9 +218,13 @@ const updateEmployee = async (request, response) => {
 const deleteEmployee = async (request, response) => {
     try {
         const userId = request.query.userId
+        const adminId = request.query.adminId
         const isExist = await employeeModel.findById({_id: userId})
         if(!isExist){
             return response.status(400).json({message: "Employee does not exists"})
+        }
+        if(adminId != isExist.userId){
+            return response.status(400).json({message: "You cannot delete the record of an employee you did not create"})
         }
         await employeeModel.findByIdAndDelete(userId)
         return response.status(200).json({message: "Employee deleted successfully"})
@@ -237,8 +260,30 @@ const getEmployeeBySearch = async (request, response) => {
     }
 }
 
+const assignTasksToEmployee = async(request, response) => {
+    try{
+        const userId = request.query.userId
+        const {taskName} = request.body
+        const isExist = await employeeModel.findById({_id: userId})
+        if(!isExist){
+            return response.status(400).json({message: "Employee does not exists"})
+        }
+        const task = new Task({
+            empId: userId,
+            taskName: taskName,
+        })
+        await task.save()
+        return response.status(201).json({message: "Task assigned to employee successfully", task: task})
+    }
+    catch(err){
+        return response.status(500).json({message: err.message || "Some error occured, try again later"})
+    }
+}
+
+
 module.exports = {
     register, loginWithVerificationCode,
     verifyLoginToken,requestLoginToken,companyDetails, addEmployeee,
-    updateEmployee, deleteEmployee, getAllEmployee, getEmployeeBySearch
+    updateEmployee, deleteEmployee, getAllEmployee, getEmployeeBySearch,
+    assignTasksToEmployee
 }
