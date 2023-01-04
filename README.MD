@@ -21,4 +21,4 @@ Lead Backend Developer - <b>Akinloluwa Olumuyide</b>
 <code> npm install </code>
 
 3. Start the local server: <br>
-<code> npm run dev <code>
+<code> npm run dev </code>
