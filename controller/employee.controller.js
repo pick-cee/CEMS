@@ -1,5 +1,6 @@
 const employeeModel = require("../models/employee.model")
 const login = require('../models/loginToken')
+const Attendance = require('../models/attendance.model')
 const {randomNumber} = require('../helpers/randomNumGenerator')
 const fs = require("fs")
 const path = require("path")
@@ -106,7 +107,28 @@ const markTaskAsCompleted = async(request, response) => {
     }
 }
 
+const markAttendance = async(request, response) => {
+    try {
+        const userId = request.query.userId
+        const isExist = await employeeModel.findOne({_id: userId})
+        if(!isExist){
+            return response.status(400).json({message: "You need to be registered by the admin"})
+        }
+        const attendance = new Attendance({
+            empId: userId,
+            firstname: isExist.firstname,
+            lastname: isExist.lastname,
+            attendanceTime: Date.now()
+        })
+        await attendance.save()
+        return response.status(200).json({message: "Attendance recorded successfully!"})
+    }
+    catch(err){
+        return response.status(500).json({message: err.message || "Some error occured, try again later"})
+    }
+}
+
 module.exports = { 
     loginEmp, verifyLoginToken, resendLoginToken,
-    markTaskAsCompleted,
+    markTaskAsCompleted, markAttendance
 }

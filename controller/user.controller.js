@@ -2,6 +2,7 @@ const User = require("../models/user.model")
 const loginToken = require("../models/loginToken")
 const Company = require('../models/company.model')
 const Task = require('../models/task.model')
+const Attendance = require('../models/attendance.model')
 const { passwordCompare, passwwordHash } = require("../helpers/bcrypt")
 const {cloudinaryUpload} = require("../helpers/cloudinary")
 const { sendMail } = require("../helpers/mailer")
@@ -280,6 +281,14 @@ const assignTasksToEmployee = async(request, response) => {
     }
 }
 
+const trackAttendancePerDay = async (request, response) => {
+    try{
+        const empAttendance = await Attendance.find()
+    }
+    catch(err){
+        return response.status(500).json({message: err.message || "Some error occured, try again later"})
+    }
+}
 
 module.exports = {
     register, loginWithVerificationCode,
