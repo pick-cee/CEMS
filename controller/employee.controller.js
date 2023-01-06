@@ -1,6 +1,7 @@
 const employeeModel = require("../models/employee.model")
 const login = require('../models/loginToken')
 const Attendance = require('../models/attendance.model')
+const Leave = require('../models/leave.models')
 const {randomNumber} = require('../helpers/randomNumGenerator')
 const fs = require("fs")
 const path = require("path")
@@ -128,7 +129,28 @@ const markAttendance = async(request, response) => {
     }
 }
 
+const requestForLeave = async (request, response) => {
+    try {
+        const userId = request.query.userId
+        const {purpose, lengthOfLeave} = request.body
+        const emp = await employeeModel.findOne({_id: userId})
+        if(!emp){
+            return response.status(400).json({message: "You need to be registered first"})
+        }
+        const leave = new Leave({
+            empId: userId,
+            purpose: purpose,
+            lengthOfLeave: lengthOfLeave
+        })
+        await leave.save()
+        return response.status(200).json({message: "Leave request successful! You will be notified accordingly", leave})
+    }
+    catch(err){
+        return response.status(500).json({message: err.message || 'Some error occured'})
+    }
+}
+
 module.exports = { 
     loginEmp, verifyLoginToken, resendLoginToken,
-    markTaskAsCompleted, markAttendance
+    markTaskAsCompleted, markAttendance, requestForLeave
 }

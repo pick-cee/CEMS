@@ -11,6 +11,7 @@ const fs = require("fs")
 const path = require("path")
 const handleBars = require("handlebars")
 const employeeModel = require("../models/employee.model")
+const leaveModels = require("../models/leave.models")
 
 const register = async(request, response) => {
     try{
@@ -283,7 +284,35 @@ const assignTasksToEmployee = async(request, response) => {
 
 const trackAttendancePerDay = async (request, response) => {
     try{
-        const empAttendance = await Attendance.find()
+        const empAttendance =  await Attendance.find()
+        return response.status(200).json({message: "Attendance record for the day", empAttendance})
+    }
+    catch(err){
+        return response.status(500).json({message: err.message || "Some error occured, try again later"})
+    }
+}
+
+const approveLeaveRequest = async (request, response) => {
+    try{
+        const empId = request.query.empId
+        const emp = await leaveModels.findOne({empId: empId})
+        const count = emp.countOfLeaves
+        const update = await emp.updateOne({countOfLeaves: count + 1, status: 'approved'})
+        await emp.save()
+        return response.status(200).json({message: "Leave approved"})
+    }
+    catch(err){
+        return response.status(500).json({message: err.message || "Some error occured, try again later"})
+    }
+}
+
+const declineLeaveRequest = async (request, response) => {
+    try{
+        const empId = request.query.empId
+        const emp = await leaveModels.findOne({empId: empId})
+        const update = await emp.updateOne({status: 'declined'})   
+        await emp.save()
+        return response.status(200).json({message: "Leave declined"})
     }
     catch(err){
         return response.status(500).json({message: err.message || "Some error occured, try again later"})
@@ -294,5 +323,6 @@ module.exports = {
     register, loginWithVerificationCode,
     verifyLoginToken,requestLoginToken,companyDetails, addEmployeee,
     updateEmployee, deleteEmployee, getAllEmployee, getEmployeeBySearch,
-    assignTasksToEmployee
+    assignTasksToEmployee, trackAttendancePerDay, approveLeaveRequest,
+    declineLeaveRequest
 }
