@@ -2,6 +2,7 @@ const employeeModel = require("../models/employee.model")
 const login = require('../models/loginToken')
 const Attendance = require('../models/attendance.model')
 const Leave = require('../models/leave.models')
+const Timesheet = require('../models/timesheet.model')
 const {randomNumber} = require('../helpers/randomNumGenerator')
 const fs = require("fs")
 const path = require("path")
@@ -115,14 +116,40 @@ const markAttendance = async(request, response) => {
         if(!isExist){
             return response.status(400).json({message: "You need to be registered by the admin"})
         }
-        const attendance = new Attendance({
-            empId: userId,
-            firstname: isExist.firstname,
-            lastname: isExist.lastname,
-            attendanceTime: Date.now()
+        const currentDate = new Date()
+        
+        Attendance.findOne({ empId: isExist._id, attendanceTime: { $gte: new Date(currentDate.getFullYear(), 
+            currentDate.getMonth(), currentDate.getDate()), 
+            $lt: new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1) }})
+            .exec(async (err, attendance) => {
+            if(err) {
+                return response.status(400).json({message: err.message || "Some error occured!"})
+            }
+            if(attendance){
+                return response.status(400).json({message: "Attendance has been already marked for the day"})
+            }
+            else {
+                const newAttendance = new Attendance({
+                    empId: isExist._id,
+                    firstname: isExist.firstname,
+                    lastname: isExist.lastname,
+                    attendanceTime: currentDate.toDateString()
+                })
+
+                // Check if the current time is after 10am
+                const lateTime = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), 10, 0, 0);
+                if(currentDate > lateTime){
+                    newAttendance.status = "late"
+                }
+                //check if the current time is after 11am, the employee is marked absent
+                const latestTime = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), 11, 0, 0);
+                if(currentDate > latestTime){
+                    newAttendance.status = "absent"
+                }
+                await newAttendance.save()
+                return response.status(200).json({message: "Attendance recorded successfully!"})
+            }
         })
-        await attendance.save()
-        return response.status(200).json({message: "Attendance recorded successfully!"})
     }
     catch(err){
         return response.status(500).json({message: err.message || "Some error occured, try again later"})
@@ -150,7 +177,24 @@ const requestForLeave = async (request, response) => {
     }
 }
 
+const createTimesheet = async (request, response) => {
+    try {
+        const empId = request.query.empId
+        const employeeExists = await employeeModel.findOne({empId})
+        if(!employeeExists){
+            return response.status(400).json({message: "User does not exists"})
+        }
+
+        const timesheet = new Timesheet({
+            emp
+        })
+    }
+    catch(err){
+        return response.status(500).json({message: err.message || "Some error occured!"})
+    }
+}
+
 module.exports = { 
     loginEmp, verifyLoginToken, resendLoginToken,
-    markTaskAsCompleted, markAttendance, requestForLeave
+    markTaskAsCompleted, markAttendance, requestForLeave, createTimesheet
 }

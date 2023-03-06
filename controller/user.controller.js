@@ -282,10 +282,18 @@ const assignTasksToEmployee = async(request, response) => {
     }
 }
 
+// This tracks the attendance by the filter specified by the admin
+// The start date, the end date as well as the attendance status in one query!
 const trackAttendancePerDay = async (request, response) => {
     try{
-        const empAttendance =  await Attendance.find()
-        return response.status(200).json({message: "Attendance record for the day", empAttendance})
+        const startDate = new Date(request.query.startDate);
+        const endDate = new Date(request.query.endDate)
+        const status = request.query.status
+        const empAttendance =  await Attendance.find({createdAt: {$gte: startDate, $lte: endDate}, status: status || {$exists: true}})
+        if(empAttendance.length === 0){
+            return response.status(200).json({message: "No record"})
+        }
+        return response.status(200).json({message: "Attendance record for the period specified", empAttendance})
     }
     catch(err){
         return response.status(500).json({message: err.message || "Some error occured, try again later"})
