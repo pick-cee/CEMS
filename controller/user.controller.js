@@ -4,6 +4,7 @@ const Company = require('../models/company.model')
 const Task = require('../models/task.model')
 const Attendance = require('../models/attendance.model')
 const { passwordCompare, passwwordHash } = require("../helpers/bcrypt")
+const cloudinary = require('cloudinary').v2
 const {cloudinaryUpload} = require("../helpers/cloudinary")
 const { sendMail } = require("../helpers/mailer")
 const {randomNumber} = require("../helpers/randomNumGenerator")
@@ -15,7 +16,8 @@ const leaveModels = require("../models/leave.models")
 
 const register = async(request, response) => {
     try{
-        const {firstname, lastname, businessEmail, password} = request.body
+        const {firstname, lastname, businessEmail, password} = request.fields
+        const {profilePhoto} = request.files
         const isExist = await User.findOne({businessEmail})
         if(isExist){
             return response.status(400).json({ message: "Account already exists, please log in."})
@@ -24,13 +26,25 @@ const register = async(request, response) => {
             return response.status(400).json({ message: "All fields are required"})
         }
         const hashedPassword = await passwwordHash(password)
+        
         const user = new User({
             firstname: firstname,
             lastname: lastname,
             businessEmail: businessEmail,
             password: hashedPassword,
+            profilePhoto: profilePhoto
         })
-    
+
+        if(profilePhoto){
+            await cloudinaryUpload(profilePhoto.path)
+            .then((downloadURL) => {
+                user.profilePhoto = downloadURL
+            })
+            .catch((err)=> {
+                return response.status(400).json({message: `Cloudinary error: ${err.message}`})
+            })
+        }
+        // await user.save()
         const filePath = path.join(__dirname, "../signup.html")
         const source = fs.readFileSync(filePath, "utf-8").toString()
         const template = handleBars.compile(source)
@@ -46,6 +60,38 @@ const register = async(request, response) => {
     }
     catch(err){
         return response.status(500).json({ message: err.message || "Something wert wrong, try again later!"})
+    }
+}
+
+const update = async(request, response) => {
+    try{
+        const {firstname, lastname, password} = request.fields
+        const {profilePhoto} = request.files
+        const userId = request.query.userId
+        const userExists = await User.findById({_id: userId})
+        if(!userExists){
+            return response.status(400).json({message: "Record does not exists"})
+        }
+
+        let updateFields = {}
+        if (firstname) updateFields.firstname = firstname
+        if (lastname) updateFields.lastname = lastname
+        if (password) updateFields.password = await passwwordHash(password)
+
+        if(profilePhoto) {
+            await cloudinaryUpload(profilePhoto.path)
+            .then((downloadURL) => {
+                updateFields.profilePhoto = downloadURL
+            })
+            .catch((err) => {
+                return response.status(400).json({message: `Cloudinary error: ${err.message}`})
+            })
+        }
+        const user = await userExists.updateOne(updateFields, {new: true})
+        return response.status(200).json({message: "User records updated successfully"})
+    }
+    catch(err){
+        return response.status(500).json({message: err.message || "Some error occured, try again later"})
     }
 }
 
@@ -327,10 +373,41 @@ const declineLeaveRequest = async (request, response) => {
     }
 }
 
+const filterAcceptedLeaveRequest = async (request, response) => {
+    try {
+        const acceptedLeave = await leaveModels.find({status: "approved"})
+        return response.status(200).json({ acceptedLeave})
+    }
+    catch(err){
+        return response.status(500).json({message: err.message || "Some error occured, try agin later"})
+    }
+}
+
+const filterDeclinedLeaveRequest = async (request, response) => {
+    try {
+        const declinedLeave = await leaveModels.find({status: "declined"})
+        return response.status(200).json({ declinedLeave })
+    }
+    catch(err){
+        return response.status(500).json({message: err.message || "Some error occured, try agin later"})
+    }
+}
+
+const filterPendingLeaveRequest = async (request, response) => {
+    try {
+        const pendingLeave = await leaveModels.find({status: "pending"})
+        return response.status(200).json({ pendingLeave })
+    }
+    catch(err){
+        return response.status(500).json({message: err.message || "Some error occured, try agin later"})
+    }
+}
+
 module.exports = {
     register, loginWithVerificationCode,
     verifyLoginToken,requestLoginToken,companyDetails, addEmployeee,
     updateEmployee, deleteEmployee, getAllEmployee, getEmployeeBySearch,
     assignTasksToEmployee, trackAttendancePerDay, approveLeaveRequest,
-    declineLeaveRequest
+    declineLeaveRequest, filterAcceptedLeaveRequest, filterDeclinedLeaveRequest,
+    filterPendingLeaveRequest, update
 }

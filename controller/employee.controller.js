@@ -3,6 +3,7 @@ const login = require('../models/loginToken')
 const Attendance = require('../models/attendance.model')
 const Leave = require('../models/leave.models')
 const Timesheet = require('../models/timesheet.model')
+const {cloudinaryUpload} = require('../helpers/cloudinary')
 const {randomNumber} = require('../helpers/randomNumGenerator')
 const fs = require("fs")
 const path = require("path")
@@ -44,6 +45,37 @@ const loginEmp = async(request, response) => {
     }
     catch(err){
         return response.status(500).json({message: err.message  || "Some error occured, try again later"})
+    }
+}
+
+const updateDetails = async (request, response) => {
+    try {
+        const {firstname, lastname} = request.fields
+        const {profilePhoto} = request.files
+        const empId = request.query.empId
+        const empExists = await employeeModel.findById({_id: empId})
+        if(!empExists){
+            return response.status(400).json({message: "Employee record does not exists"})
+        }
+
+        let updateFields = {}
+        if(firstname) updateFields.firstname = firstname
+        if (lastname) updateFields.lastname = lastname
+
+        if(profilePhoto){
+            await cloudinaryUpload(profilePhoto.path)
+            .then((downloadURL)=>{
+                updateFields.profilePhoto = downloadURL
+            })
+            .catch((err) => {
+                return response.status(400).json({ message: `Cloudinary error: ${err.message}`})
+            })
+        }
+        const employee = await empExists.update(updateFields, {new: true})
+        return response.status(200).json({ message: "Employee records updated successfully"})
+    }
+    catch(err){
+        return response.status(500).json({message: err.message || "Some error occured, try again later"})
     }
 }
 
@@ -196,5 +228,5 @@ const createTimesheet = async (request, response) => {
 
 module.exports = { 
     loginEmp, verifyLoginToken, resendLoginToken,
-    markTaskAsCompleted, markAttendance, requestForLeave, createTimesheet
+    markTaskAsCompleted, markAttendance, requestForLeave, createTimesheet, updateDetails
 }

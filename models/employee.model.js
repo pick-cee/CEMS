@@ -19,6 +19,9 @@ const employeeSchema = new mongoose.Schema({
     lastLogin: {
         type: Date,
     },
+    profilePhoto: {
+        type: String,
+    },
     comapnyId: {
         type: mongoose.Types.ObjectId,
         required: true
