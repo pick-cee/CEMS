@@ -22,6 +22,17 @@ const attendanceSchema = new mongoose.Schema({
         enum: ['absent','present', 'late'],
         default: 'present'
     },
+    location: {
+        longitude: {
+            type: String,
+        },
+        latitude: {
+            type: String,
+        },
+    },
+    address: {
+        type: String
+    }
 }, {timestamps: true})
 
 module.exports = mongoose.model('Attendance', attendanceSchema)

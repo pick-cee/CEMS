@@ -7,9 +7,18 @@ const {cloudinaryUpload} = require('../helpers/cloudinary')
 const {randomNumber} = require('../helpers/randomNumGenerator')
 const fs = require("fs")
 const path = require("path")
+const geolocation = require('geolocation')
+const broswer = require('browser-env')
+const NodeGeocoder = require("node-geocoder")
 const handleBars = require("handlebars")
 const { sendMail } = require("../helpers/mailer")
 const taskModel = require("../models/task.model")
+
+// this is to enable us use the node-geocoder module
+const options = {
+    provider: 'openstreetmap'
+}
+const geocoder = NodeGeocoder(options)
 
 const loginEmp = async(request, response) => {
     try{

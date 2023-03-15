@@ -1,6 +1,8 @@
+const http = require('http')
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
+const logger = require("morgan")
 const userRoutes = require('./routes/user')
 const employeeRoutes = require('./routes/employee')
 mongoose.set('strictQuery', true)
@@ -8,6 +10,9 @@ require("dotenv").config();
 
 const port = process.env.PORT;
 const app = express();
+const server = http.createServer(app)
+const {Server} = require("socket.io")
+const io = new Server(server)
 
 process.env.NODE_ENV === "development"
   ? mongoose
@@ -25,6 +30,7 @@ process.env.NODE_ENV === "development"
       .catch((err) => console.log(err));
 
 app.use(cors());
+app.use(logger('dev'))
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
