@@ -3,22 +3,17 @@ const login = require('../models/loginToken')
 const Attendance = require('../models/attendance.model')
 const Leave = require('../models/leave.models')
 const Timesheet = require('../models/timesheet.model')
+const Message = require('../models/message')
+const chatRoom = require('../models/chatRoom')
 const {cloudinaryUpload} = require('../helpers/cloudinary')
 const {randomNumber} = require('../helpers/randomNumGenerator')
 const fs = require("fs")
 const path = require("path")
-const geolocation = require('geolocation')
-const broswer = require('browser-env')
-const NodeGeocoder = require("node-geocoder")
 const handleBars = require("handlebars")
 const { sendMail } = require("../helpers/mailer")
 const taskModel = require("../models/task.model")
 
-// this is to enable us use the node-geocoder module
-const options = {
-    provider: 'openstreetmap'
-}
-const geocoder = NodeGeocoder(options)
+
 
 const loginEmp = async(request, response) => {
     try{
@@ -235,7 +230,80 @@ const createTimesheet = async (request, response) => {
     }
 }
 
+const createChatRoom = async (request, response) => {
+    try {
+        // this is the person that is logged in and trying to create a chat room
+        const userId = request.query.userId
+        const {participants} = request.body
+        const userExists = await employeeModel.findById({_id: userId})
+        if(!userExists){
+            return response.status(400).json({ message: "You have to be registered to be able to chat" })
+        }
+        // an array of all participants object with their Id and the name of each participant
+        const participantObjs = []
+        participantObjs.push({participantId: userId, participantName: userExists.firstname + " " +userExists.lastname})
+        console.log(participantObjs)
+        for (let i=0; i<participants.length; i++){
+            const participantId = participants[i]
+            const participant = await employeeModel.findById({_id: participantId})
+            if(!participant){
+                return response.status(400).json({ message: `User with ID ${participantId} not found` })
+            }
+            participantObjs.push({participantId, participantName: participant.firstname + " " +participant.lastname})
+        }
+        const room = new chatRoom({
+            participants: participantObjs
+        })
+        await room.save()
+
+        return response.status(201).json({message: "Chat room created successfully"})
+    } 
+    catch(err) {
+        return response.status(500).json({ message: err.message || "Some error occured!"})
+    }
+}
+
+const sendChat = async (request, response) => {
+    try{
+        const userId = request.query.userId
+        const chatRoomId = request.query.chatRoomId
+        const {message} = request.body
+        const userExists = await employeeModel.findById({ _id: userId })
+        const roomExists = await chatRoom.findById({ _id: chatRoomId })
+        if(!userExists){
+            return response.status(400).json({ message: "You have to be registered to be able to chat" })
+        }
+        if(!roomExists) {
+            return response.status(400).json({ message: "Chat room does not exists"})
+        }
+
+        const chat = new Message({
+            sender: userId,
+            senderFullname: userExists.firstname + " " +userExists.lastname,
+            content: message,
+            chatRoomId: chatRoomId
+        })
+
+        await chat.save()
+        
+        return response.status(201).json({message: "Chat sent"})
+    }
+    catch(err){
+        return response.status(500).json({ message: err.message || "Some error occured!"})
+    }
+}
+
+const joinChatRoom = async (request, response) => {
+    try{
+
+    }
+    catch(err){
+        return response.status(500).json({message: err.message || "Some error occured, try again later"})
+    }
+}
+
 module.exports = { 
     loginEmp, verifyLoginToken, resendLoginToken,
-    markTaskAsCompleted, markAttendance, requestForLeave, createTimesheet, updateDetails
+    markTaskAsCompleted, markAttendance, requestForLeave, createTimesheet, updateDetails,
+    createChatRoom, sendChat
 }
