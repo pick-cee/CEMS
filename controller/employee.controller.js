@@ -263,6 +263,40 @@ const createChatRoom = async (request, response) => {
     }
 }
 
+const addUsersToRoom = async (request, response) => {
+    try{
+        const userId = request.query.userId
+        const chatRoomId = request.query.chatRoomId
+        const {employeeId} = request.body
+
+        const roomExists = await chatRoom.findById({ _id: chatRoomId })
+        if(!roomExists){
+            return response.status(404).json({message: "Chat room does not exists, please create one"})
+        }
+
+        //check if the employee that is to be added is in the database
+        const employeeExists = await employeeModel.findById({_id: employeeId})
+
+        //check if the user making the request is the same person that created the chat room
+        if(roomExists.participants[0].participantId.toString() !== userId){
+            return response.status(401).json({message: "Only the creator can add participants"})
+        }
+
+        //check if the participant is already in the room
+        if(roomExists.participants.find(p => p.participantId.toString() === employeeId)){
+            return response.status(400).json({message: "Participant already exists in the chat room"})
+        }
+
+        roomExists.participants.push({participantId: employeeId, participantName: employeeExists.firstname + " " + employeeExists.lastname})
+        await roomExists.save()
+
+        response.status(200).json({message: 'Participants added successfully', roomExists})
+    }
+    catch(err){
+        return response.status(500).json({message: err.message || "Some error occured"})
+    }
+}
+
 const sendChat = async (request, response) => {
     try{
         const userId = request.query.userId
@@ -283,7 +317,9 @@ const sendChat = async (request, response) => {
             content: message,
             chatRoomId: chatRoomId
         })
-
+        const fullname = userExists.firstname + " " +userExists.lastname
+        roomExists.messages.push({message: message, sender: userId, senderFullname: fullname})
+        await roomExists.save()
         await chat.save()
         
         return response.status(201).json({message: "Chat sent"})
@@ -295,7 +331,22 @@ const sendChat = async (request, response) => {
 
 const joinChatRoom = async (request, response) => {
     try{
+        const chatRoomId = request.query.chatRoomId
+        // const userId = request.query.userId
 
+        // const userExists = await employeeModel.findById({_id: userId})
+        
+        //find the chat Room and get the participants in that room 
+        const roomExists = await chatRoom.findById({_id: chatRoomId}).populate('participants.participantId', 'participants.participantName')
+
+        if(!roomExists){
+            return response.status(400).json({message: "Chat room does not exists"})
+        }
+        // find all the messages for the chatroom and populate the sender
+        const messages = await Message.find({chatRoomId}).populate('sender', 'senderFullname')
+
+        return response.status(200).json({ roomExists, messages })
+        
     }
     catch(err){
         return response.status(500).json({message: err.message || "Some error occured, try again later"})
@@ -305,5 +356,5 @@ const joinChatRoom = async (request, response) => {
 module.exports = { 
     loginEmp, verifyLoginToken, resendLoginToken,
     markTaskAsCompleted, markAttendance, requestForLeave, createTimesheet, updateDetails,
-    createChatRoom, sendChat
+    createChatRoom, sendChat, addUsersToRoom, joinChatRoom
 }

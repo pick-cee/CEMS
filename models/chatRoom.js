@@ -12,7 +12,8 @@ const chatRoomSchema = new mongoose.Schema({
     }],
     messages: [{
         message: { type: String},
-        sender: {type: mongoose.Types.ObjectId}
+        sender: {type: mongoose.Types.ObjectId},
+        senderFullname: {type: String}
     }],
 
 }, {timestamps: true})
