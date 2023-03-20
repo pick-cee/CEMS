@@ -1,8 +1,8 @@
-const mailGun = require("mailgun-js")
+// const mailGun = require("mailgun-js")
 const nodemailer = require('nodemailer')
 require("dotenv").config()
 
-const mg = mailGun({apiKey: process.env.MAILGUN_API_KEY, domain: process.env.MAILGUN_DOMAIN_NAME})
+// const mg = mailGun({apiKey: process.env.MAILGUN_API_KEY, domain: process.env.MAILGUN_DOMAIN_NAME})
 
 const sendMail = async (to, subject, text) => {
     try {
