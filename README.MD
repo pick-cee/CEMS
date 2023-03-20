@@ -5,7 +5,7 @@ CEMS is a cloud based employee management system designed to eliminate the stres
 Lead Backend Developer - <b>Akinloluwa Olumuyide</b>
 
 ## Backend Server URL
-<link>cems-production.up.railway.app</link>
+<link>https://cems-production.up.railway.app/</link>
 <br></br>
 
 ## API Documentation
